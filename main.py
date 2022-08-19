@@ -8,7 +8,7 @@ async def on_startup(_):
 
 
 client.register_handler_client(dp)
-# executors.register_handler_executors(dp)
+executors.register_handler_executors(dp)
 
 executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
