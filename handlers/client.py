@@ -1,8 +1,10 @@
 from aiogram import types, Dispatcher
 from keyboards import client_menu
+from handlers import functions as func
 
 
 async def command_start(message: types.Message):
+	func.first_join(message.from_user.id, message.from_user.first_name, message.from_user.username, 2)
 	await message.answer("Здравствуйте!", reply_markup=client_menu.client_menu_kb)
 
 
