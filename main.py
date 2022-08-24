@@ -2,7 +2,7 @@ from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked
 from aiogram import types
 from create_bot import dp
-from handlers import client, executors
+from handlers import client, executors, functions
 
 
 async def on_startup(_):
@@ -17,5 +17,7 @@ async def error_bot_blocked(update: types.Update, exception: BotBlocked):
 
 client.register_handler_client(dp)
 executors.register_handler_executors(dp)
+functions.register_handler_function(dp)
 
-executor.start_polling(dp, skip_updates=False, on_startup=on_startup)
+if __name__ == '__main__':
+	executor.start_polling(dp, skip_updates=False, on_startup=on_startup)
