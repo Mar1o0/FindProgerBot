@@ -26,13 +26,13 @@ async def callback_add_task(callback: types.CallbackQuery):
 	await callback.answer()
 	await callback.message.delete()
 	await func.FSMAddTaskForExecutor.short_name.set()
-	await callback.message.answer("Напишите краткое название")
+	await callback.message.answer("Напишите краткое название\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 
 async def check_tasks(message: types.Message):
 	conn = sqlite3.connect('base.db')
 	cursor = conn.cursor()
-	data_tasks = cursor.execute('SELECT * FROM tasks WHERE client_id = ?', [message.from_user.id]).fetchall()
+	data_tasks = cursor.execute('SELECT * FROM tasks WHERE client_id = ? AND status != "Выполнено ✅"', [message.from_user.id]).fetchall()
 	await message.answer("Список активных задач", reply_markup=func.check_tasks(data_tasks))
 
 
@@ -61,19 +61,19 @@ async def callback_edit_task(callback: types.CallbackQuery):
 		await callback.answer()
 		await callback.message.delete()
 		await func.FSMEditShortName.edit_short_name.set()
-		await callback.message.answer("Напишите краткое название")
+		await callback.message.answer("Напишите краткое название\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 	if callback.data == "edit_description":
 		await callback.answer()
 		await callback.message.delete()
 		await func.FSMEditDescription.edit_description.set()
-		await callback.message.answer("Напишите описание задачи")
+		await callback.message.answer("Напишите описание задачи\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 	if callback.data == "edit_deadline":
 		await callback.answer()
 		await callback.message.delete()
 		await func.FSMEditDeadline.edit_deadline.set()
-		await callback.message.answer("Напишите дедлайн работы")
+		await callback.message.answer("Напишите дедлайн работы\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 	if callback.data == "delete_task":
 		await callback.answer()
@@ -107,7 +107,7 @@ def register_handler_client(dp: Dispatcher):
 	dp.register_message_handler(command_start, commands=["start"])
 	dp.register_message_handler(add_task, text=["📝 Добавить задачу 📝"])
 	dp.register_callback_query_handler(callback_add_task, Text(startswith='add-task_'), state=None)
-	dp.register_message_handler(check_tasks, text=["👁 Проверить задачи 👁"])
+	dp.register_message_handler(check_tasks, text=["👁 Список активных задач 👁"])
 	dp.register_callback_query_handler(callback_check_tasks, Text(startswith='check-task_'))
 	dp.register_callback_query_handler(callback_edit_task, text=["edit_short_name", "edit_description",
 	                                                             "edit_deadline", "delete_task", "yes", "no"])

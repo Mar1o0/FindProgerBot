@@ -3,7 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 client_menu_kb = ReplyKeyboardMarkup(resize_keyboard=True)
 client_menu_kb.add(
 	KeyboardButton("📝 Добавить задачу 📝"),
-	KeyboardButton("👁 Проверить задачи 👁")
+	KeyboardButton("👁 Список активных задач 👁")
 )
 
 client_check_tasks_inb = InlineKeyboardMarkup()
