@@ -5,7 +5,7 @@ from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from handlers import client
+from handlers import client, executors
 from create_bot import bot
 from keyboards import executors_menu
 
@@ -39,34 +39,17 @@ class FSMEditStakeExecutor(StatesGroup):
 	new_stake = State()
 
 
+class FSMEditFinalPrice(StatesGroup):
+	final_price = State()
+
+
+class FSMAddDescriptionForReceipt(StatesGroup):
+	description_receipt = State()
+
+
 def first_join(tg_id, name, login):
 	conn = sqlite3.connect('base.db')
 	cursor = conn.cursor()
-	tables = """
-			CREATE TABLE IF NOT EXISTS users(
-			id integer PRIMARY KEY, 
-			tg_id integer NOT NULL, 
-			name text, 
-			login text NOT NULL, 
-			access_id integer NOT NULL DEFAULT 2, 
-			date_reg text NOT NULL, 
-			stake integer DEFAULT 0
-			);
-			CREATE TABLE IF NOT EXISTS tasks(
-			id integer PRIMARY KEY, 
-			short_name text NOT NULL, 
-			description text NOT NULL,
-			deadline text NOT NULL, 
-			client text NOT NULL, 
-			client_id integer NOT NULL, 
-			executor text NOT NULL, 
-			executor_id integer NOT NULL, 
-			status text DEFAULT "В обработке 🕔",
-			timer integer DEFAULT 0,
-			final_price real DEFAULT 0
-			)
-			"""
-	cursor.executescript(tables)
 	row = cursor.execute(f'SELECT * FROM users WHERE tg_id = "{tg_id}"').fetchall()
 
 	if len(row) == 0:
@@ -97,14 +80,14 @@ async def add_task_short_name(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
 		data['short_name'] = message.text
 	await FSMAddTaskForExecutor.next()
-	await message.answer("Напишите описание самой задачи максимально подробно")
+	await message.answer("Напишите описание самой задачи максимально подробно\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 
 async def add_task_description(message: types.Message, state: FSMContext):
 	async with state.proxy() as data:
 		data['description'] = message.text
 	await FSMAddTaskForExecutor.next()
-	await message.answer("Напишите дедлайн работы")
+	await message.answer("Напишите дедлайн работы\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 
 async def add_task_deadline(message: types.Message, state: FSMContext):
@@ -116,20 +99,21 @@ async def add_task_deadline(message: types.Message, state: FSMContext):
 		description = data["description"]
 		deadline = data["deadline"]
 		executor_name = cursor.execute(f'SELECT name FROM users WHERE id = {client.call_add_task}').fetchone()[0]
+		executor_login = cursor.execute(f'SELECT login FROM users WHERE id = {client.call_add_task}').fetchone()[0]
 		executor_id = cursor.execute(f'SELECT tg_id FROM users WHERE id = {client.call_add_task}').fetchone()[0]
 		cursor.execute(
 			f"INSERT INTO tasks(short_name, description, deadline, client, client_id, executor, executor_id) VALUES('{short_name}', '{description}', '{deadline}', '{message.from_user.username}', '{message.from_user.id}', '{executor_name}', '{executor_id}')")
 		conn.commit()
 	await message.answer(
-		f"Задача успешно добавлена. Ожидайте ответа от исполнителя.\nЗадачу можно посмотреть по кнопке <b>\"Проверить задачи\"</b>",
+		f"Задача успешно добавлена. Ожидайте ответа от исполнителя <b>{executor_name}</b>(@{executor_login}).\nЗадачу можно посмотреть по кнопке <b>\"👁 Список активных задач 👁\"</b>",
 		parse_mode='HTML')
 	status = cursor.execute(f"SELECT status FROM tasks WHERE short_name = ?", [short_name]).fetchone()[0]
 	global notice_id_task
 	notice_id_task = cursor.execute(f"SELECT id FROM tasks WHERE short_name = ?", [short_name]).fetchone()[0]
 	await bot.send_message(
 		cursor.execute(f"SELECT executor_id FROM tasks WHERE short_name = ?", [short_name]).fetchone()[0],
-		f"<b>Пришла новая задача!</b>\n<b>Отправитель:</b> {message.from_user.username}({message.from_user.id})\n<b>Название:</b> {short_name}\n<b>Описание:</b> {description}\n<b>Дедлайн:</b> {deadline}\n<b>Статус:</b> {status}",
-		parse_mode='HTML', reply_markup=executors_menu.notice_edit_status)
+		f"<b>🔔 Пришла новая задача!</b>\n<b>Отправитель:</b> @{message.from_user.username}({message.from_user.id})\n<b>Название:</b> {short_name}\n<b>Описание:</b> {description}\n<b>Дедлайн:</b> {deadline}\n<b>Статус:</b> {status}",
+		parse_mode='HTML', reply_markup=executors_menu.status_notice_inb)
 	await state.finish()
 
 
@@ -140,6 +124,32 @@ def check_tasks(data_tasks):
 			InlineKeyboardButton(f"{i[1]}", callback_data=f"check-task_{i[0]}")
 		)
 	return list_tasks
+
+
+async def edit_final_price(message: types.Message, state: FSMContext):
+	async with state.proxy() as data:
+		conn = sqlite3.connect('base.db')
+		cursor = conn.cursor()
+		data['final_price'] = message.text
+		final_price = data["final_price"]
+		short_name = executors.looking_data_in_table(executors.call_active_tasks_executor)
+		cursor.execute(f"UPDATE tasks SET final_price = ? WHERE short_name = ?", [final_price, short_name[0]])
+		conn.commit()
+	await message.answer("Сумма изменена")
+	await state.finish()
+
+
+async def add_description_receipt(message: types.Message, state: FSMContext):
+	async with state.proxy() as data:
+		conn = sqlite3.connect('base.db')
+		cursor = conn.cursor()
+		data['description_receipt'] = message.text
+		description_receipt = data["description_receipt"]
+		short_name = executors.looking_data_in_table(executors.call_active_tasks_executor)
+		cursor.execute(f"UPDATE tasks SET description_receipt = ? WHERE short_name = ?", [description_receipt, short_name[0]])
+		conn.commit()
+	await message.answer("Описание добавлено")
+	await state.finish()
 
 
 async def edit_short_name(message: types.Message, state: FSMContext):
@@ -209,10 +219,10 @@ async def edit_stake_executor(message: types.Message, state: FSMContext):
 				await state.finish()
 		except TypeError:
 			await FSMEditStakeExecutor.new_stake.set()
-			await message.answer("Введите положительное целочисленное число!")
+			await message.answer("Введите положительное целочисленное число!\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 		except ValueError:
 			await FSMEditStakeExecutor.new_stake.set()
-			await message.answer("Введите положительное целочисленное число!")
+			await message.answer("Введите положительное целочисленное число!\n\nДля отмены напишите слово <b>\"отмена\"</b>", parse_mode="HTML")
 
 
 def check_active_tasks_for_executor(data_tasks):
@@ -225,10 +235,14 @@ def check_active_tasks_for_executor(data_tasks):
 
 
 def register_handler_function(dp: Dispatcher):
-	dp.register_message_handler(cancel_input, Text(equals='отмена', ignore_case=True), state="*")
+	dp.register_message_handler(cancel_input, Text(equals=["отмена", "👤 Профиль 👤", "📝 Добавить задачу 📝",
+	                                                       "/start", "/admin", "👁 Список активных задач 👁",
+	                                                       "📚 Список задач 📚"], ignore_case=True), state="*")
 	dp.register_message_handler(add_task_short_name, state=FSMAddTaskForExecutor.short_name)
 	dp.register_message_handler(add_task_description, state=FSMAddTaskForExecutor.description)
 	dp.register_message_handler(add_task_deadline, state=FSMAddTaskForExecutor.deadline)
+	dp.register_message_handler(edit_final_price, state=FSMEditFinalPrice.final_price)
+	dp.register_message_handler(add_description_receipt, state=FSMAddDescriptionForReceipt.description_receipt)
 	dp.register_message_handler(edit_short_name, state=FSMEditShortName.edit_short_name)
 	dp.register_message_handler(edit_description, state=FSMEditDescription.edit_description)
 	dp.register_message_handler(edit_deadline, state=FSMEditDeadline.edit_deadline)

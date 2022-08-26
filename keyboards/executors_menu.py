@@ -34,3 +34,41 @@ edit_profile_executor.add(
 	InlineKeyboardButton("Изменить имя", callback_data='rename_executor'),
 	InlineKeyboardButton("Изменить ставку", callback_data='set_stake')
 )
+
+select_task_executor = InlineKeyboardMarkup()
+select_task_executor.add(
+	InlineKeyboardButton("Изменить статус", callback_data='edit_status'),
+	InlineKeyboardButton("Начать выполнение", callback_data='start_execution')
+).add(
+	InlineKeyboardButton("🏁 Завершить задачу 🏁", callback_data='finish_task')
+)
+
+timer_start = InlineKeyboardMarkup()
+timer_start.add(
+	InlineKeyboardButton("🟢 Запустить счетчик времени 🟢", callback_data="timer_start")
+)
+
+timer_stop = InlineKeyboardMarkup()
+timer_stop.add(
+	InlineKeyboardButton("🔴 Остановить счетчик времени 🔴", callback_data="timer_stop")
+)
+
+status_notice_inb = InlineKeyboardMarkup()
+status_notice_inb.add(
+	InlineKeyboardButton("Прочитано 👀", callback_data="status_read_notice")
+).add(
+	InlineKeyboardButton("Отменено ⛔️", callback_data="status_canceled_notice")
+)
+
+receipt_button = InlineKeyboardMarkup()
+receipt_button.add(
+	InlineKeyboardButton("💰 Подтвердить чек 💰", callback_data="send_receipt")
+).add(
+	InlineKeyboardButton("Отредактировать чек", callback_data="edit_receipt")
+)
+
+edit_receipt = InlineKeyboardMarkup()
+edit_receipt.add(
+	InlineKeyboardButton("Добавить описание", callback_data="add_description"),
+	InlineKeyboardButton("Изменить сумму", callback_data="edit_final_price")
+)
