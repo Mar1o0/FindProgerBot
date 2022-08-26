@@ -17,7 +17,11 @@ async def add_task(message: types.Message):
 	conn = sqlite3.connect('base.db')
 	cursor = conn.cursor()
 	data_executor = cursor.execute(f'SELECT * FROM users WHERE access_id = 10').fetchall()
-	await message.answer("Для начала нужно выбрать исполнителя", reply_markup=func.add_task(data_executor))
+	a = []
+	if data_executor == a:
+		await message.answer("На данный момент исполнителей нет")
+	else:
+		await message.answer("Для начала нужно выбрать исполнителя", reply_markup=func.add_task(data_executor))
 
 
 async def callback_add_task(callback: types.CallbackQuery):
